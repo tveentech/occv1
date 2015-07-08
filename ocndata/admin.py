@@ -380,6 +380,20 @@ class AirTicketDocketAdmin(admin.ModelAdmin):
 			if obj.pk is None:
 				obj.created_by = request.user
 
+			# managing entry into tally
+			if obj.invoice_no:
+				obj.tally_narration = 'Being Air Ticket issued from %s (PNR # %s), traveling on dates %s, by %s (%d guests). Invoice # %d, Air Ticket docket # %d' % (
+					obj.sector,
+					obj.pnr,
+					obj.start_date.strftime('%d %b %Y'),
+					obj.guest_name,
+					obj.no_of_guests,
+					obj.invoice_no,
+					obj.pk )
+			else:
+				obj.tally_narration = ''
+				obj.is_tally_entered = False
+
 			obj.save()
 		except Exception, e:
 			print e
@@ -609,6 +623,21 @@ class HotelDocketAdmin(admin.ModelAdmin):
 			# assign current user as author while saving for first time
 			if obj.pk is None:
 				obj.created_by = request.user
+
+			# managing entry into tally
+			if obj.invoice_no:
+				obj.tally_narration = 'Being %s in %s booked for %s (%d guests) from %s to %s. Invoice # %d, Hotel docket # %d' % (
+					obj.hotel,
+					obj.destination_city,
+					obj.guest_name,
+					obj.no_of_guests,
+					obj.check_in.strftime('%d %b %Y'),
+					obj.check_out.strftime('%d %b %Y'),
+					obj.invoice_no,
+					obj.pk )
+			else:
+				obj.tally_narration = ''
+				obj.is_tally_entered = False
 
 			obj.save()
 		except Exception, e:
@@ -1046,6 +1075,18 @@ class VisaDocketAdmin(admin.ModelAdmin):
 		if obj.pk is None:
 			obj.created_by = request.user
 
+		# managing entry into tally
+		if obj.invoice_no:
+			obj.tally_narration = 'Being %s Visa booked for %s (%d guests). Invoice # %d, Visa docket # %d' % (
+				obj.destination_country,
+				obj.guest_name,
+				obj.no_of_guests,
+				obj.invoice_no,
+				obj.pk )
+		else:
+			obj.tally_narration = ''
+			obj.is_tally_entered = False
+
 		obj.save()
 
 admin.site.register(VisaDocket, VisaDocketAdmin)
@@ -1264,172 +1305,184 @@ class TravelInsuranceDocketAdmin(admin.ModelAdmin):
 		if obj.pk is None:
 			obj.created_by = request.user
 
+		# managing entry into tally
+		if obj.invoice_no:
+			obj.tally_narration = 'Being %s insurance plan issued for %s (%d guests). Invoice # %d, Travel Insurance docket # %d' % (
+				obj.insurance_plan,
+				obj.guest_name,
+				obj.no_of_guests,
+				obj.invoice_no,
+				obj.pk )
+		else:
+			obj.tally_narration = ''
+			obj.is_tally_entered = False
+
 		obj.save()
 
 admin.site.register(TravelInsuranceDocket, TravelInsuranceDocketAdmin)
 
 
-class CreditNoteDocketAdmin(admin.ModelAdmin):
-	search_fields = ['invoice_no', 'old_docket_no',]
-	save_on_top = True
+# class CreditNoteDocketAdmin(admin.ModelAdmin):
+# 	search_fields = ['invoice_no', 'old_docket_no',]
+# 	save_on_top = True
 
-	actions = [submit_to_accounts, return_to_operations, mark_void]
+# 	actions = [submit_to_accounts, return_to_operations, mark_void]
 
-	list_display = ('id', 'void_flag_based_booking_date', 'credit_note_type',
-					'old_docket_no', 'new_purchase', 'new_sale',
-					'is_submit_to_accounts', 'invoice_no', 'is_invoice_created',
-					'is_tally_entered',)
+# 	list_display = ('id', 'void_flag_based_booking_date', 'credit_note_type',
+# 					'old_docket_no', 'new_purchase', 'new_sale',
+# 					'is_submit_to_accounts', 'invoice_no', 'is_invoice_created',
+# 					'is_tally_entered',)
 
-	_list_filter_operations = ('created_at', 'is_submit_to_accounts',
-							   'is_void', 'credit_note_type',)
-	_list_filter_accounts = ('created_at', 'is_invoice_created',
-							 'is_tally_entered', 'is_purchase_received',
-							 'is_void', 'created_by', 'credit_note_type',)
-	_list_filter_admin = ('created_at', 'is_submit_to_accounts',
-						  'is_invoice_created', 'is_tally_entered',
-						  'is_purchase_received', 'is_void',
-						  'created_by', 'credit_note_type',)
+# 	_list_filter_operations = ('created_at', 'is_submit_to_accounts',
+# 							   'is_void', 'credit_note_type',)
+# 	_list_filter_accounts = ('created_at', 'is_invoice_created',
+# 							 'is_tally_entered', 'is_purchase_received',
+# 							 'is_void', 'created_by', 'credit_note_type',)
+# 	_list_filter_admin = ('created_at', 'is_submit_to_accounts',
+# 						  'is_invoice_created', 'is_tally_entered',
+# 						  'is_purchase_received', 'is_void',
+# 						  'created_by', 'credit_note_type',)
 
-	list_editable = ('invoice_no', 'is_tally_entered',)
+# 	list_editable = ('invoice_no', 'is_tally_entered',)
 
-	def void_flag_based_booking_date(self, obj):
-		result = obj.booking_date
-		if obj.is_void:
-			return u'<div style="text-decoration:line-through">%s\
-</div>' % result.strftime('%b %d, %Y')
-		return result
-	void_flag_based_booking_date.allow_tags = True
-	void_flag_based_booking_date.short_description = 'Date'
+# 	def void_flag_based_booking_date(self, obj):
+# 		result = obj.booking_date
+# 		if obj.is_void:
+# 			return u'<div style="text-decoration:line-through">%s\
+# </div>' % result.strftime('%b %d, %Y')
+# 		return result
+# 	void_flag_based_booking_date.allow_tags = True
+# 	void_flag_based_booking_date.short_description = 'Date'
 
-	def changelist_view(self, request, extra_context=None):
-		# set list filter based on current user status
-		if request.user.is_superuser:
-			self.list_filter = self._list_filter_admin
-		elif request.user.groups.filter(name='SUPPORT').count():
-			self.list_filter = self._list_filter_admin
-		elif request.user.groups.filter(name='OPERATIONS').count():
-			self.list_filter = self._list_filter_operations
-		elif request.user.groups.filter(name='ACCOUNTS').count():
-			self.list_filter = self._list_filter_accounts
+# 	def changelist_view(self, request, extra_context=None):
+# 		# set list filter based on current user status
+# 		if request.user.is_superuser:
+# 			self.list_filter = self._list_filter_admin
+# 		elif request.user.groups.filter(name='SUPPORT').count():
+# 			self.list_filter = self._list_filter_admin
+# 		elif request.user.groups.filter(name='OPERATIONS').count():
+# 			self.list_filter = self._list_filter_operations
+# 		elif request.user.groups.filter(name='ACCOUNTS').count():
+# 			self.list_filter = self._list_filter_accounts
 
-		# set Default filters as per current user status
+# 		# set Default filters as per current user status
 
-		# set is_submit_to_accounts to No in case Operations
-		if request.user.groups.filter(name='OPERATIONS').count():
-			if not request.GET.has_key('is_submit_to_accounts__exact'):
-				q = request.GET.copy()
-				q['is_submit_to_accounts__exact'] = '0'
-				request.GET = q
-				request.META['QUERY_STRING'] = request.GET.urlencode()
-			if not request.GET.has_key('created_by__id__exact'):
-				q = request.GET.copy()
-				q['created_by__id__exact'] = '%d' % User.objects.get(username=request.user).id
-				request.GET = q
-				request.META['QUERY_STRING'] = request.GET.urlencode()
+# 		# set is_submit_to_accounts to No in case Operations
+# 		if request.user.groups.filter(name='OPERATIONS').count():
+# 			if not request.GET.has_key('is_submit_to_accounts__exact'):
+# 				q = request.GET.copy()
+# 				q['is_submit_to_accounts__exact'] = '0'
+# 				request.GET = q
+# 				request.META['QUERY_STRING'] = request.GET.urlencode()
+# 			if not request.GET.has_key('created_by__id__exact'):
+# 				q = request.GET.copy()
+# 				q['created_by__id__exact'] = '%d' % User.objects.get(username=request.user).id
+# 				request.GET = q
+# 				request.META['QUERY_STRING'] = request.GET.urlencode()
 
-		# set is_invoice_created to No in case Accounts
-		"""
-		if request.user.groups.filter(name='ACCOUNTS').count():
-			if not request.GET.has_key('is_invoice_created__exact'):
-				q = request.GET.copy()
-				q['is_invoice_created__exact'] = '0'
-				request.GET = q
-				request.META['QUERY_STRING'] = request.GET.urlencode()
-		"""
+# 		# set is_invoice_created to No in case Accounts
+# 		"""
+# 		if request.user.groups.filter(name='ACCOUNTS').count():
+# 			if not request.GET.has_key('is_invoice_created__exact'):
+# 				q = request.GET.copy()
+# 				q['is_invoice_created__exact'] = '0'
+# 				request.GET = q
+# 				request.META['QUERY_STRING'] = request.GET.urlencode()
+# 		"""
 
-		return super(CreditNoteDocketAdmin, self).changelist_view(request,
-															 extra_context)
+# 		return super(CreditNoteDocketAdmin, self).changelist_view(request,
+# 															 extra_context)
 
-	"""
-	def get_readonly_fields(self, request, obj=None):
-		if request.user.groups.filter(name='ACCOUNTS'):
-			return ['booking_date', 'credit_note_type',
-					'old_docket_no',
-					'new_sale', 'new_purchase', 'new_payment_mode',]
-		else:
-			return []
-	"""
+# 	"""
+# 	def get_readonly_fields(self, request, obj=None):
+# 		if request.user.groups.filter(name='ACCOUNTS'):
+# 			return ['booking_date', 'credit_note_type',
+# 					'old_docket_no',
+# 					'new_sale', 'new_purchase', 'new_payment_mode',]
+# 		else:
+# 			return []
+# 	"""
 
-	def get_form(self, request, obj=None, **kwargs):
-		if request.user.is_superuser or \
-		   request.user.groups.filter(name='ACCOUNTS') or \
-		   request.user.groups.filter(name='SUPPORT'):
-			self.fieldsets = (
-				(None, {
-					'classes': ('wide', 'extrapretty',),
-					'fields': (('invoice_no', 'invoice_dispatch_date'),
-							   ('is_purchase_received', 'purchase_invoice_no'),
-							   ('is_tally_entered', 'tally_narration'),
-							   'booking_date',)}),
-				(None, {
-					'fields': (('credit_note_type', 'old_docket_no'),
-							   ('new_purchase', 'new_sale', 'new_payment_mode'),)
-				}),
-				('Remarks', {
-					'classes': ('collapse',),
-					'fields': ('remarks',)
-				}),
-			)
-		elif request.user.groups.filter(name='OPERATIONS'):
-			self.fieldsets = (
-				(None, {
-					'classes': ('wide', 'extrapretty',),
-					'fields': ('booking_date',
-							   ('credit_note_type', 'old_docket_no'),
-							   ('new_purchase', 'new_sale',
-								'new_payment_mode'),)
-				}),
-				('Remarks', {
-					'classes': ('collapse',),
-					'fields': ('remarks',)
-				}),
-			)
+# 	def get_form(self, request, obj=None, **kwargs):
+# 		if request.user.is_superuser or \
+# 		   request.user.groups.filter(name='ACCOUNTS') or \
+# 		   request.user.groups.filter(name='SUPPORT'):
+# 			self.fieldsets = (
+# 				(None, {
+# 					'classes': ('wide', 'extrapretty',),
+# 					'fields': (('invoice_no', 'invoice_dispatch_date'),
+# 							   ('is_purchase_received', 'purchase_invoice_no'),
+# 							   ('is_tally_entered', 'tally_narration'),
+# 							   'booking_date',)}),
+# 				(None, {
+# 					'fields': (('credit_note_type', 'old_docket_no'),
+# 							   ('new_purchase', 'new_sale', 'new_payment_mode'),)
+# 				}),
+# 				('Remarks', {
+# 					'classes': ('collapse',),
+# 					'fields': ('remarks',)
+# 				}),
+# 			)
+# 		elif request.user.groups.filter(name='OPERATIONS'):
+# 			self.fieldsets = (
+# 				(None, {
+# 					'classes': ('wide', 'extrapretty',),
+# 					'fields': ('booking_date',
+# 							   ('credit_note_type', 'old_docket_no'),
+# 							   ('new_purchase', 'new_sale',
+# 								'new_payment_mode'),)
+# 				}),
+# 				('Remarks', {
+# 					'classes': ('collapse',),
+# 					'fields': ('remarks',)
+# 				}),
+# 			)
 
-		return super(CreditNoteDocketAdmin, self).get_form(request,
-													  obj=None,
-													  **kwargs)
+# 		return super(CreditNoteDocketAdmin, self).get_form(request,
+# 													  obj=None,
+# 													  **kwargs)
 
-	def queryset(self, request):
-		qs = super(CreditNoteDocketAdmin, self).queryset(request)
+# 	def queryset(self, request):
+# 		qs = super(CreditNoteDocketAdmin, self).queryset(request)
 
-		# show dockets which have been submitted to accounts
-		if request.user.groups.filter(name='ACCOUNTS').count():
-			return qs.filter(is_submit_to_accounts=True)
-		else:
-			return qs
+# 		# show dockets which have been submitted to accounts
+# 		if request.user.groups.filter(name='ACCOUNTS').count():
+# 			return qs.filter(is_submit_to_accounts=True)
+# 		else:
+# 			return qs
 
-	def get_actions(self, request):
-		actions = super(CreditNoteDocketAdmin, self).get_actions(request)
+# 	def get_actions(self, request):
+# 		actions = super(CreditNoteDocketAdmin, self).get_actions(request)
 
-		# remove DELETE SELECTED action for non SuperUser
-		if not request.user.is_superuser:
-			del actions['delete_selected']
+# 		# remove DELETE SELECTED action for non SuperUser
+# 		if not request.user.is_superuser:
+# 			del actions['delete_selected']
 
-		# remove SUBMIT TO ACCOUNTS action for User in Accounts Group
-		if request.user.groups.filter(name='ACCOUNTS').count():
-			del actions['submit_to_accounts']
+# 		# remove SUBMIT TO ACCOUNTS action for User in Accounts Group
+# 		if request.user.groups.filter(name='ACCOUNTS').count():
+# 			del actions['submit_to_accounts']
 
-		# remove RETURN TO OPERATIONS, PURCHASE RECEIVED action
-		# for User in Operations Group
-		if request.user.groups.filter(name='OPERATIONS').count():
-			del actions['return_to_operations']
+# 		# remove RETURN TO OPERATIONS, PURCHASE RECEIVED action
+# 		# for User in Operations Group
+# 		if request.user.groups.filter(name='OPERATIONS').count():
+# 			del actions['return_to_operations']
 
-		return actions
+# 		return actions
 
-	def save_model(self, request, obj, form, change):
-		# calculate profit while saving
-		obj.new_profit = obj.new_sale - obj.new_purchase
+# 	def save_model(self, request, obj, form, change):
+# 		# calculate profit while saving
+# 		obj.new_profit = obj.new_sale - obj.new_purchase
 
-		# mark is_invoice_created as True when Invoice No is entered
-		if obj.invoice_no:
-			obj.is_invoice_created = True
-		else:
-			obj.is_invoice_created = False
+# 		# mark is_invoice_created as True when Invoice No is entered
+# 		if obj.invoice_no:
+# 			obj.is_invoice_created = True
+# 		else:
+# 			obj.is_invoice_created = False
 
-		# assign current user as author while saving for first time
-		if obj.pk is None:
-			obj.created_by = request.user
+# 		# assign current user as author while saving for first time
+# 		if obj.pk is None:
+# 			obj.created_by = request.user
 
-		obj.save()
+# 		obj.save()
 
-admin.site.register(CreditNoteDocket, CreditNoteDocketAdmin)
+# admin.site.register(CreditNoteDocket, CreditNoteDocketAdmin)
